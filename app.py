@@ -8,8 +8,8 @@ from models import db, Attendance, Student, User
 from utils import get_address_osm
 from insightface.app import FaceAnalysis
 
-# Khởi tạo model buffalo_s
-face_model = FaceAnalysis(name='buffalo_s')
+# Dùng model nhẹ buffalo_lite
+face_model = FaceAnalysis(name='buffalo_lite')
 face_model.prepare(ctx_id=-1)  # ép chạy CPU
 
 # --- Init Flask ---
@@ -84,6 +84,7 @@ def checkin():
         longitude = float(longitude)
         img_bytes = np.frombuffer(image_file.read(), np.uint8)
         img = cv2.imdecode(img_bytes, cv2.IMREAD_COLOR)
+        img = cv2.resize(img, (480, 480))  # giảm kích thước ảnh để tiết kiệm RAM
     except Exception as e:
         return jsonify({"status": "failed", "message": "Lỗi xử lý ảnh", "address": ""})
 
