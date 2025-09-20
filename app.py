@@ -8,9 +8,8 @@ from models import db, Attendance, Student, User
 from utils import get_address_osm
 from insightface.app import FaceAnalysis
 
-# Dùng model nhẹ buffalo_lite
-face_model = FaceAnalysis(name='buffalo_lite')
-face_model.prepare(ctx_id=-1)  # ép chạy CPU
+face_model = FaceAnalysis(name='buffalo_sc', root='./models')
+face_model.prepare(ctx_id=-1)
 
 # --- Init Flask ---
 app = Flask(__name__)
