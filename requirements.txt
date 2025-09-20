@@ -1,0 +1,22 @@
+# Flask backend
+flask
+flask_sqlalchemy
+
+# Nhận diện khuôn mặt bằng InsightFace
+insightface==0.7.3
+onnxruntime
+
+# Xử lý ảnh
+opencv-python
+numpy
+
+# Tính khoảng cách cosine
+scipy
+
+# Xử lý dữ liệu và xuất Excel
+pandas
+openpyxl
+
+# Gọi địa chỉ từ OSM
+requests
+geopy
