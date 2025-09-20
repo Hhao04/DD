@@ -20,3 +20,5 @@ openpyxl
 # Gọi địa chỉ từ OSM
 requests
 geopy
+
+psycopg2-binary
