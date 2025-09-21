@@ -108,14 +108,29 @@ def checkin():
     if best_id is None or best_score > THRESHOLD:
         return jsonify({"status": "failed", "message": "Khuôn mặt không hợp lệ", "address": ""})
 
+    
     # Lưu điểm danh
     now = datetime.now()
     address = get_address_osm(latitude, longitude)
+    
+    # 🔎 Kiểm tra sinh viên đã điểm danh hôm nay chưa
+    exists = Attendance.query.filter_by(student_id=best_id, date=now.date()).first()
+    if exists:
+        return jsonify({
+            "status": "failed",
+            "message": f"⚠️ Bạn đã điểm danh hôm nay rồi (score={best_score:.4f}, threshold={THRESHOLD})",
+            "student_id": best_id,
+            "date": str(exists.date),
+            "time": str(exists.time),
+            "address": exists.address
+        })
+
+    # Nếu chưa điểm danh thì lưu mới
     att = Attendance(
         student_id=best_id,
         date=now.date(),
         time=now.time(),
-        status="present",
+        status="Có mặt",
         latitude=latitude,
         longitude=longitude,
         address=address
@@ -124,8 +139,8 @@ def checkin():
     db.session.commit()
 
     return jsonify({
-        "status": "present",
-        "message": "Điểm danh thành công",
+        "status": "Có mặt",
+        "message": f"✅ Điểm danh thành công (score={best_score:.4f}, threshold={THRESHOLD})",
         "student_id": best_id,
         "date": str(now.date()),
         "time": str(now.time()),
