@@ -3,6 +3,7 @@ from datetime import datetime
 import pickle, os, numpy as np
 from scipy.spatial.distance import cosine
 import pandas as pd
+import cv2
 
 from models import db, Attendance, Student, User
 from utils import get_address_osm
@@ -166,6 +167,8 @@ def history_teacher():
         "address": a.Attendance.address
     } for a in records])
 
+from flask import send_file
+
 @app.route('/attendance/export_excel', methods=['GET'])
 def export_excel():
     class_name = request.args.get("class")
@@ -173,6 +176,7 @@ def export_excel():
     q = db.session.query(Attendance, Student).join(Student, Attendance.student_id==Student.student_id)
     if class_name: q = q.filter(Student.class_name==class_name)
     if date: q = q.filter(Attendance.date==date)
+
     df = pd.DataFrame([{
         "student_id": a.Attendance.student_id,
         "name": a.Student.name,
@@ -184,9 +188,18 @@ def export_excel():
         "longitude": a.Attendance.longitude,
         "address": a.Attendance.address
     } for a in q.all()])
+
     filename = f"export_{class_name}_{date}.xlsx"
     df.to_excel(filename, index=False)
-    return jsonify({"status":"success","file":filename})
+
+    return send_file(filename, as_attachment=True, download_name=filename)
+
+@app.route('/classes', methods=['GET'])
+def get_classes():
+    classes = db.session.query(Student.class_name).distinct().all()
+    class_list = [c[0] for c in classes if c[0] is not None]
+    return jsonify(class_list)
+
 
 # --- Run ---
 if __name__ == "__main__":
