@@ -77,7 +77,11 @@ def checkin():
 
     # Kiểm tra đầu vào
     if not student_id or not image_file:
-        return jsonify({"status": "failed", "message": "Thiếu mã sinh viên hoặc ảnh", "address": ""})
+        return jsonify({
+            "status": "failed",
+            "message": "Thiếu mã sinh viên hoặc ảnh",
+            "address": ""
+        })
 
     try:
         latitude = float(latitude)
@@ -86,17 +90,25 @@ def checkin():
         img = cv2.imdecode(img_bytes, cv2.IMREAD_COLOR)
         img = cv2.resize(img, (480, 480))  # giảm kích thước ảnh để tiết kiệm RAM
     except Exception as e:
-        return jsonify({"status": "failed", "message": "Lỗi xử lý ảnh", "address": ""})
+        return jsonify({
+            "status": "failed",
+            "message": "Lỗi xử lý ảnh",
+            "address": ""
+        })
 
     # Nhận diện khuôn mặt
     faces = face_model.get(img)
     if not faces:
-        return jsonify({"status": "failed", "message": "Không tìm thấy khuôn mặt", "address": ""})
+        return jsonify({
+            "status": "failed",
+            "message": "Không tìm thấy khuôn mặt",
+            "address": ""
+        })
 
     # Trích embedding từ khuôn mặt đầu tiên
     embedding = faces[0].embedding
 
-    # So sánh với embeddings đã lưu
+    # So sánh với toàn bộ embeddings trong DB để tìm best_id
     best_score, best_id = 1.0, None
     for sid, emb_template in embeddings_dict.items():
         templates = [emb_template] if not isinstance(emb_template, list) else emb_template
@@ -105,27 +117,39 @@ def checkin():
             if score < best_score:
                 best_score, best_id = score, sid
 
+    # Nếu không tìm được match
     if best_id is None or best_score > THRESHOLD:
-        return jsonify({"status": "failed", "message": "Khuôn mặt không hợp lệ", "address": ""})
+        return jsonify({
+            "status": "failed",
+            "message": f"Khuôn mặt không hợp lệ (score={best_score:.4f}, threshold={THRESHOLD})",
+            "address": ""
+        })
 
-    
-    # Lưu điểm danh
+    # 🔎 Kiểm tra best_id có trùng với student_id đăng nhập không
+    if student_id != best_id:
+        return jsonify({
+            "status": "failed",
+            "message": f"Mặt không khớp với tài khoản (app={student_id}, face={best_id}, score={best_score:.4f})",
+            "address": ""
+        })
+
+    # Nếu khớp → lưu điểm danh
     now = datetime.now()
     address = get_address_osm(latitude, longitude)
-    
-    # 🔎 Kiểm tra sinh viên đã điểm danh hôm nay chưa
+
+    # Kiểm tra đã điểm danh hôm nay chưa
     exists = Attendance.query.filter_by(student_id=best_id, date=now.date()).first()
     if exists:
         return jsonify({
             "status": "failed",
-            "message": f"⚠️ Bạn đã điểm danh hôm nay rồi (score={best_score:.4f}, threshold={THRESHOLD})",
+            "message": f"⚠️ Bạn đã điểm danh hôm nay rồi",
             "student_id": best_id,
             "date": str(exists.date),
             "time": str(exists.time),
             "address": exists.address
         })
 
-    # Nếu chưa điểm danh thì lưu mới
+    # Nếu chưa thì lưu mới
     att = Attendance(
         student_id=best_id,
         date=now.date(),
@@ -146,6 +170,7 @@ def checkin():
         "time": str(now.time()),
         "address": address
     })
+
 
     
 @app.route('/attendance/history', methods=['GET'])
