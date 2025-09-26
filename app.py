@@ -211,26 +211,51 @@ from flask import send_file
 def export_excel():
     class_name = request.args.get("class")
     date = request.args.get("date")
-    q = db.session.query(Attendance, Student).join(Student, Attendance.student_id==Student.student_id)
-    if class_name: q = q.filter(Student.class_name==class_name)
-    if date: q = q.filter(Attendance.date==date)
 
-    df = pd.DataFrame([{
-        "student_id": a.Attendance.student_id,
-        "name": a.Student.name,
-        "class": a.Student.class_name,
-        "date": str(a.Attendance.date),
-        "time": str(a.Attendance.time),
-        "status": a.Attendance.status,
-        "latitude": a.Attendance.latitude,
-        "longitude": a.Attendance.longitude,
-        "address": a.Attendance.address
-    } for a in q.all()])
+    # Lấy danh sách tất cả sinh viên trong lớp
+    students_query = Student.query
+    if class_name:
+        students_query = students_query.filter(Student.class_name == class_name)
+    students = students_query.all()
 
+    # Lấy danh sách điểm danh ngày đó
+    attendance_query = Attendance.query
+    if class_name:
+        attendance_query = attendance_query.join(Student).filter(Student.class_name == class_name)
+    if date:
+        attendance_query = attendance_query.filter(Attendance.date == date)
+    attendance_records = {a.student_id: a for a in attendance_query.all()}
+
+    # Tạo DataFrame đầy đủ
+    data = []
+    for s in students:
+        if s.student_id in attendance_records:
+            a = attendance_records[s.student_id]
+            status = a.status
+            time = str(a.time)
+            address = a.address
+        else:
+            status = "Vắng"
+            time = ""
+            address = ""
+        data.append({
+            "student_id": s.student_id,
+            "name": s.name,
+            "class": s.class_name,
+            "date": date,
+            "time": time,
+            "status": status,
+            "latitude": attendance_records.get(s.student_id).latitude if s.student_id in attendance_records else "",
+            "longitude": attendance_records.get(s.student_id).longitude if s.student_id in attendance_records else "",
+            "address": address
+        })
+
+    df = pd.DataFrame(data)
     filename = f"export_{class_name}_{date}.xlsx"
     df.to_excel(filename, index=False)
 
     return send_file(filename, as_attachment=True, download_name=filename)
+
 
 @app.route('/classes', methods=['GET'])
 def get_classes():
