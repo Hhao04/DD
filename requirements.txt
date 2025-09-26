@@ -10,9 +10,6 @@ onnxruntime
 opencv-python
 numpy
 
-# Tính khoảng cách cosine
-scipy
-
 # Xử lý dữ liệu và xuất Excel
 pandas
 openpyxl

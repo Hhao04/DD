@@ -1,9 +1,10 @@
 from flask import Flask, request, jsonify
 from datetime import datetime
 import pickle, os, numpy as np
-from scipy.spatial.distance import cosine
 import pandas as pd
 import cv2
+from numpy import dot
+from numpy.linalg import norm
 
 from models import db, Attendance, Student, User
 from utils import get_address_osm
@@ -89,7 +90,7 @@ def checkin():
         img_bytes = np.frombuffer(image_file.read(), np.uint8)
         img = cv2.imdecode(img_bytes, cv2.IMREAD_COLOR)
         img = cv2.resize(img, (480, 480))  # giảm kích thước ảnh để tiết kiệm RAM
-    except Exception as e:
+    except Exception:
         return jsonify({
             "status": "failed",
             "message": "Lỗi xử lý ảnh",
@@ -109,23 +110,23 @@ def checkin():
     embedding = faces[0].embedding
 
     # So sánh với toàn bộ embeddings trong DB để tìm best_id
-    best_score, best_id = 1.0, None
+    best_score, best_id = -1.0, None
     for sid, emb_template in embeddings_dict.items():
         templates = [emb_template] if not isinstance(emb_template, list) else emb_template
         for te in templates:
-            score = cosine(embedding, te)
-            if score < best_score:
+            score = dot(embedding, te) / (norm(embedding) * norm(te))  # cosine similarity
+            if score > best_score:
                 best_score, best_id = score, sid
 
     # Nếu không tìm được match
-    if best_id is None or best_score > THRESHOLD:
+    if best_id is None or best_score < THRESHOLD:
         return jsonify({
             "status": "failed",
-            "message": f"Khuôn mặt không hợp lệ (score={best_score:.4f}, threshold={THRESHOLD})",
+            "message": f"Khuôn mặt không hợp lệ (similarity={best_score:.4f}, threshold={THRESHOLD})",
             "address": ""
         })
 
-    # 🔎 Kiểm tra best_id có trùng với student_id đăng nhập không
+    # Kiểm tra best_id có trùng với student_id đăng nhập không
     if student_id != best_id:
         return jsonify({
             "status": "failed",
@@ -137,7 +138,6 @@ def checkin():
     now = datetime.now()
     address = get_address_osm(latitude, longitude)
 
-    # Kiểm tra đã điểm danh hôm nay chưa
     exists = Attendance.query.filter_by(student_id=best_id, date=now.date()).first()
     if exists:
         return jsonify({
@@ -149,7 +149,6 @@ def checkin():
             "address": exists.address
         })
 
-    # Nếu chưa thì lưu mới
     att = Attendance(
         student_id=best_id,
         date=now.date(),
@@ -170,7 +169,6 @@ def checkin():
         "time": str(now.time()),
         "address": address
     })
-
 
     
 @app.route('/attendance/history', methods=['GET'])
