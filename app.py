@@ -25,7 +25,7 @@ db.init_app(app)
 # --- Load embeddings ---
 with open("embeddings.pkl","rb") as f:
     embeddings_dict = pickle.load(f)
-THRESHOLD = 0.6
+THRESHOLD = 0.5
 
 # --- Load students.csv ---
 def load_students_csv():
