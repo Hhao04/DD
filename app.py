@@ -245,8 +245,6 @@ def export_excel():
             "date": date,
             "time": time,
             "status": status,
-            "latitude": attendance_records.get(s.student_id).latitude if s.student_id in attendance_records else "",
-            "longitude": attendance_records.get(s.student_id).longitude if s.student_id in attendance_records else "",
             "address": address
         })
 
