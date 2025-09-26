@@ -135,7 +135,11 @@ def checkin():
         })
 
     # Nếu khớp → lưu điểm danh
-    now = datetime.now()
+    from datetime import timezone, timedelta
+
+    VN = timezone(timedelta(hours=7))
+    now = datetime.now(tz=VN)  # giờ VN
+
     address = get_address_osm(latitude, longitude)
 
     exists = Attendance.query.filter_by(student_id=best_id, date=now.date()).first()
@@ -200,8 +204,6 @@ def history_teacher():
         "date": str(a.Attendance.date),
         "time": str(a.Attendance.time),
         "status": a.Attendance.status,
-        "latitude": a.Attendance.latitude,
-        "longitude": a.Attendance.longitude,
         "address": a.Attendance.address
     } for a in records])
 
