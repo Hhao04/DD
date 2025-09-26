@@ -89,7 +89,7 @@ def checkin():
         longitude = float(longitude)
         img_bytes = np.frombuffer(image_file.read(), np.uint8)
         img = cv2.imdecode(img_bytes, cv2.IMREAD_COLOR)
-        img = cv2.resize(img, (480, 480))  # giảm kích thước ảnh để tiết kiệm RAM
+        img = cv2.resize(img, (640, 640))  # giảm kích thước ảnh để tiết kiệm RAM
     except Exception:
         return jsonify({
             "status": "failed",
